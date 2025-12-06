@@ -31,18 +31,180 @@ Notas de seguridad:
  - Manejo de excepciones simplificado para fines educativos.
 
  */
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.sql.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Vector;
+
 public class SimuladorSO {
     public static void main(String[] args) {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome!");
+       // configurar "look and feel" del sistema para mejor apariencia
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ignored) {}
 
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            System.out.println("i = " + i);
+        SwingUtilities.invokeLater(() -> {
+           SimWindow window = new SimWindow();
+           window.setVisible(true);
+        });
+    }
+}
+
+class SimWindow extends JFrame {
+    private final DBManager db;
+    private final DefaultTableModel historyModel;
+    private final JTable historyTable;
+
+    public SimWindow() {
+        super("Simulador de sistema operativo - Ventana principal");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(900, 600);
+        setLocationRelativeTo(null);
+
+        db = new DBManager();
+
+        // layout principal
+        setLayout(new BorderLayout(8, 8));
+
+        // top : barra de informacion
+        JPanel topBar = new JPanel(new BorderLayout());
+        JLabel title = new JLabel("     SimuladorSO v1.0    ");
+        title.setFont(new Font("SansSerif", Font.BOLD, 18));
+        topBar.add(title, BorderLayout.WEST);
+
+        JButton btnShutdown = new JButton("Apagar");
+        btnShutdown.addActionListener(this::actionShutdown);
+        topBar.add(btnShutdown, BorderLayout.EAST);
+
+        add(topBar, BorderLayout.NORTH);
+
+        // left : panel con opciones (simulan programas / acciones del SO)
+        JPanel left = new JPanel();
+        left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
+        left.setBorder(BorderFactory.createTitledBorder("Opciones"));
+        left.setPreferredSize(new Dimension(220, 0));
+
+        JButton btnOpenApp = new JButton("Abrir programa");
+        btnOpenApp.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnOpenApp.addActionListener(this::actionOpenApp);
+
+        JButton btnListProcs = new JButton("Listar procesos");
+        btnListProcs.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnListProcs.addActionListener(this::actionListProcs);
+
+        JButton btnCreateFile = new JButton("Crear archivo");
+        btnCreateFile.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnCreateFile.addActionListener(this::actionCreateFile);
+
+        JButton btnDeleteFile = new JButton("Borrar archivo");
+        btnDeleteFile.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnDeleteFile.addActionListener(this::actionDeleteFile);
+
+        JButton btnShowHistory = new JButton("Mostrar historial (DB)");
+        btnShowHistory.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnShowHistory.addActionListener(e -> loadHistoryFromDB());
+
+        left.add(Box.createVerticalStrut(10));
+        left.add(btnOpenApp);
+        left.add(Box.createVerticalStrut(8));
+        left.add(btnListProcs);
+        left.add(Box.createVerticalStrut(8));
+        left.add(btnCreateFile);
+        left.add(Box.createVerticalStrut(8));
+        left.add(btnDeleteFile);
+        left.add(Box.createVerticalStrut(12));
+        left.add(btnShowHistory);
+
+        add(left, BorderLayout.WEST);
+
+        // Center: área de "escritorio" y registro en pantalla
+        JPanel center = new JPanel(new BorderLayout(6,6));
+        center.setBorder(BorderFactory.createTitledBorder("Escritorio / Consola"));
+
+        JTextArea console = new JTextArea();
+        console.setEditable(false);
+        console.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        JScrollPane consoleScroll = new JScrollPane(console);
+        consoleScroll.setPreferredSize(new Dimension(400, 300));
+
+        // Abajo: historial cargado desde DB en una tabla
+        historyModel = new DefaultTableModel(new Object[]{"ID","Timestamp","Acción","Detalles"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        historyTable = new JTable(historyModel);
+        JScrollPane tableScroll = new JScrollPane(historyTable);
+        tableScroll.setBorder(BorderFactory.createTitledBorder("Historial guardado en Oracle"));
+        tableScroll.setPreferredSize(new Dimension(600, 200));
+
+        center.add(consoleScroll, BorderLayout.CENTER);
+        center.add(tableScroll, BorderLayout.SOUTH);
+
+        add(center, BorderLayout.CENTER);
+
+        // Bottom: status bar
+        JLabel status = new JLabel("Listo");
+        status.setBorder(BorderFactory.createEmptyBorder(6,6,6,6));
+        add(status, BorderLayout.SOUTH);
+
+        // Inicializar: cargar historial
+        loadHistoryFromDB();
+
+        // Helper: register a sample boot action
+        db.insertAction("BOOT", "Ventana principal iniciada");
+        console.append(timeNow() + " - BOOT: Ventana principal iniciada\n");
+    }
+
+    private actionOpenApp(ActionEvent e) {
+        String[] apps = {"Editor de texto","Calculadora","Navegador","Terminal"};
+        String app = (String) JOptionPane.showInputDialog(this, "Seleccione aplicación:", "Abrir programa",
+                JOptionPane.PLAIN_MESSAGE, null, apps, apps[0]);
+        if (app != null) {
+            String details = "Usuario abrió: " + app;
+            db.insertAction("OPEN_APP", details);
+            JOptionPane.showMessageDialog(this, "Se abrió: " + app, "Info", JOptionPane.INFORMATION_MESSAGE);
+            appendToConsole(details);
+            loadHistoryFromDB();
+        }
+    }
+
+    private void actionListProcs(ActionEvent e) {
+        // simulacion simple de procesos
+        String procs = "PID 101 - Sistema\\nPID 102 - Editor de texto\\nPID 103 - Calculadora\\nPID 250 - Navegador";
+        db.insertAction("LIST_PROCS", "Se listaron procesos");
+        JOptionPane.showMessageDialog(this, procs, "Procesos activos", JOptionPane.INFORMATION_MESSAGE);
+        appendToConsole("Se listaron procesos\n" + procs);
+        loadHistoryFromDB();
+    }
+
+    private void actionCreateFile(ActionEvent e) {
+        String filename = JOptionPane.showInputDialog(this, "Nombre del archivo a crear:", "nuevo.txt");
+        if (filename != null && !filename.trim().isEmpty()) {
+            String details = "Archivo creado: " + filename;
+            db.insertAction("CREATE_FILE", details);
+            JOptionPane.showMessageDialog(this, "Archivo creado: " + filename, "Info", JOptionPane.INFORMATION_MESSAGE);
+            appendToConsole(details);
+            loadHistoryFromDB();
+        }
+    }
+
+    private void actionShutdown(ActionEvent e) {
+        int resp = JOptionPane.showConfirmDialog(this, "¿Desea apagar el simulador?", "Confirmar",
+                JOptionPane.YES_NO_OPTION);
+        if (resp == JOptionPane.YES_OPTION) {
+            db.insertAction("SHUTDOWN", "El usuario apagó el simulador");
+            appendToConsole("SHUTDOWN: El usuario apagó el simulador\n");
+            dispose();
+            System.exit(0);
         }
     }
 }
+
+class DBManager {}
