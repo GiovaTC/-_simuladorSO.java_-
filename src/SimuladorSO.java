@@ -205,7 +205,7 @@ class SimWindow extends JFrame {
             loadHistoryFromDB();
         }
     }
-    
+
     private void actionShutdown(ActionEvent e) {
         int resp = JOptionPane.showConfirmDialog(this, "¿Desea apagar el simulador?", "Confirmar",
                 JOptionPane.YES_NO_OPTION);
