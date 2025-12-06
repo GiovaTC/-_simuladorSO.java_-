@@ -205,6 +205,52 @@ class SimWindow extends JFrame {
             System.exit(0);
         }
     }
+
+    private void appendToConsole(String text) {
+        //  buscar el console JTextArea en el centro
+        Component[] comps = getContentPane().getComponents();
+        for (Component c : comps) {
+            if (c instanceof JPanel) {
+                JPanel p = (JPanel) c;
+                for (Component inner : p.getComponents()) {
+                    if (inner instanceof JScrollPane) {
+                        JScrollPane sp = (JScrollPane) inner;
+                        JViewport vp = sp.getViewport();
+                        Component view = vp.getView();
+                        if (view instanceof JTextArea) {
+                            JTextArea ta = (JTextArea) view;
+                            ta.append(timeNow() + " - " + text + "\n");
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void loadHistoryFromDB() {
+        // vaciar modelo
+        SwingUtilities.invokeLater(() -> {
+            historyModel.setRowCount(0);
+            try (ResultSet rs = db.fetchHistory()) {
+                while (rs != null && rs.next()) {
+                    Vector<Object> row = new Vector<>();
+                    row.add(rs.getLong("id"));
+                    Timestamp ts = rs.getTimestamp("action_ts");
+                    row.add(ts != null ? ts.ToString() : "");
+                    row.add(rs.getString("action_type"));
+                    row.add(rs.getString("details"));
+                    historyModel.addRow(row);
+                }
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "Error al cargar historial" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+    }
+
+    private String timeNow() {
+        return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"));
+    }
 }
 
 class DBManager {}
