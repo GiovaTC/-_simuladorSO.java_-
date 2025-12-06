@@ -162,7 +162,7 @@ class SimWindow extends JFrame {
         console.append(timeNow() + " - BOOT: Ventana principal iniciada\n");
     }
 
-    private actionOpenApp(ActionEvent e) {
+    private void actionOpenApp(ActionEvent e) {
         String[] apps = {"Editor de texto","Calculadora","Navegador","Terminal"};
         String app = (String) JOptionPane.showInputDialog(this, "Seleccione aplicación:", "Abrir programa",
                 JOptionPane.PLAIN_MESSAGE, null, apps, apps[0]);
@@ -195,6 +195,17 @@ class SimWindow extends JFrame {
         }
     }
 
+    private void actionDeleteFile(ActionEvent e) {
+        String filename = JOptionPane.showInputDialog(this, "Nombre del archivo a borrar:", "viejo.txt");
+        if (filename != null && !filename.trim().isEmpty()) {
+            String details = "Archivo borrado: " + filename;
+            db.insertAction("DELETE_FILE", details);
+            JOptionPane.showMessageDialog(this, "Archivo borrado: " + filename, "Info", JOptionPane.INFORMATION_MESSAGE);
+            appendToConsole(details);
+            loadHistoryFromDB();
+        }
+    }
+    
     private void actionShutdown(ActionEvent e) {
         int resp = JOptionPane.showConfirmDialog(this, "¿Desea apagar el simulador?", "Confirmar",
                 JOptionPane.YES_NO_OPTION);
@@ -237,7 +248,7 @@ class SimWindow extends JFrame {
                     Vector<Object> row = new Vector<>();
                     row.add(rs.getLong("id"));
                     Timestamp ts = rs.getTimestamp("action_ts");
-                    row.add(ts != null ? ts.ToString() : "");
+                    row.add(ts != null ? ts.toString() : "");
                     row.add(rs.getString("action_type"));
                     row.add(rs.getString("details"));
                     historyModel.addRow(row);
@@ -253,4 +264,51 @@ class SimWindow extends JFrame {
     }
 }
 
-class DBManager {}
+class DBManager {
+    //>>> ACTUALIZA ESTOS VALORES CON TU CONEXION ORACLE <<<
+    private static final String DB_URL = "jdbc:oracle:thin:@//localhost:1521/orcl";
+    private static final String DB_USER = "system";
+    private static final String DB_PASS = "Tapiero123";
+
+    //consultas
+    private static final String INSERT_SQL = "INSERT INTO so_actions (action_type, details) VALUES (?, ?)";
+    private static final String FETCH_SQL = "SELECT id, action_ts, action_type, details * FROM so_actions ORDER BY action_ts DESC";
+
+    public DBManager() {
+        // Probar conexión al iniciar (opcional)
+        try (Connection conn = getConnection()) {
+            // ok
+        } catch (SQLException ex) {
+            // Si falla, avisar al usuario mediante diálogo (no lanzar excepción fatal)
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null,
+                    "No se pudo conectar a la base de datos Oracle:\n" + ex.getMessage(), "ADVERTENCIA", JOptionPane.WARNING_MESSAGE));
+        }
+    }
+
+    public Connection getConnection() throws SQLException {
+        // Cargar driver (no estrictamente necesario con JDBC 4+, pero seguro)
+        try {
+            Class.forName("oracle.jdbc.OracleDriver");
+        } catch (ClassNotFoundException ignored) {}
+        return DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+    }
+
+    public void insertAction(String actionType, String details) {
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(INSERT_SQL)) {
+            ps.setString(1, actionType);
+            ps.setString(2, details);
+            ps.executeUpdate();
+        } catch (SQLException ex) {
+            // Manejo simple: mostrar diálogo
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null,
+                    "Error al insertar acción en DB:\n" + ex.getMessage(), "ERROR DB", JOptionPane.ERROR_MESSAGE));
+        }
+    }
+
+    public ResultSet fetchHistory() throws SQLException {
+        Connection conn = getConnection();
+        PreparedStatement ps = conn.prepareStatement(FETCH_SQL);
+        // Nota: devolvemos ResultSet abierto; el llamador debe cerrarlo
+        return ps.executeQuery();
+    }
+}
