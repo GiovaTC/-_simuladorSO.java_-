@@ -4,6 +4,8 @@
 
 # 🖥️ SimuladorSO -- Java Swing + Oracle 19c .
 
+<img width="1093" height="750" alt="image" src="https://github.com/user-attachments/assets/a2707f56-bc96-4414-8e59-25086b9c05b8" />    
+
 <img width="2552" height="1079" alt="image" src="https://github.com/user-attachments/assets/b0676ee1-331c-4f53-b84b-50fe76708364" />    
 
 Aplicación en un solo archivo Java (SimuladorSO.java) para IntelliJ, que
