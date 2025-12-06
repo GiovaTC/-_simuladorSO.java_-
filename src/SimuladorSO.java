@@ -42,17 +42,19 @@ import java.time.format.DateTimeFormatter;
 import java.util.Vector;
 
 public class SimuladorSO {
+
     public static void main(String[] args) {
-       // configurar "look and feel" del sistema para mejor apariencia
+        // Configurar "look and feel" del sistema para mejor apariencia
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {}
 
         SwingUtilities.invokeLater(() -> {
-           SimWindow window = new SimWindow();
-           window.setVisible(true);
+            SimWindow window = new SimWindow();
+            window.setVisible(true);
         });
     }
+
 }
 
 class SimWindow extends JFrame {
@@ -61,19 +63,19 @@ class SimWindow extends JFrame {
     private final JTable historyTable;
 
     public SimWindow() {
-        super("Simulador de sistema operativo - Ventana principal");
+        super("Simulador de Sistema Operativo - Ventana Principal");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(900, 600);
         setLocationRelativeTo(null);
 
         db = new DBManager();
 
-        // layout principal
+        // Layout principal
         setLayout(new BorderLayout(8, 8));
 
-        // top : barra de informacion
+        // Top: barra de información
         JPanel topBar = new JPanel(new BorderLayout());
-        JLabel title = new JLabel("     SimuladorSO v1.0    ");
+        JLabel title = new JLabel("  SimuladorSO v1.0  ");
         title.setFont(new Font("SansSerif", Font.BOLD, 18));
         topBar.add(title, BorderLayout.WEST);
 
@@ -83,7 +85,7 @@ class SimWindow extends JFrame {
 
         add(topBar, BorderLayout.NORTH);
 
-        // left : panel con opciones (simulan programas / acciones del SO)
+        // Left: panel con opciones (simulan programas/acciones del SO)
         JPanel left = new JPanel();
         left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
         left.setBorder(BorderFactory.createTitledBorder("Opciones"));
@@ -176,8 +178,8 @@ class SimWindow extends JFrame {
     }
 
     private void actionListProcs(ActionEvent e) {
-        // simulacion simple de procesos
-        String procs = "PID 101 - Sistema\\nPID 102 - Editor de texto\\nPID 103 - Calculadora\\nPID 250 - Navegador";
+        // Simulación simple de procesos
+        String procs = "PID 101 - Sistema\nPID 102 - Editor de texto\nPID 103 - Calculadora\nPID 250 - Navegador";
         db.insertAction("LIST_PROCS", "Se listaron procesos");
         JOptionPane.showMessageDialog(this, procs, "Procesos activos", JOptionPane.INFORMATION_MESSAGE);
         appendToConsole("Se listaron procesos\n" + procs);
@@ -218,7 +220,7 @@ class SimWindow extends JFrame {
     }
 
     private void appendToConsole(String text) {
-        //  buscar el console JTextArea en el centro
+        // Buscar el console JTextArea en el centro
         Component[] comps = getContentPane().getComponents();
         for (Component c : comps) {
             if (c instanceof JPanel) {
@@ -240,7 +242,7 @@ class SimWindow extends JFrame {
     }
 
     private void loadHistoryFromDB() {
-        // vaciar modelo
+        // Vaciar modelo
         SwingUtilities.invokeLater(() -> {
             historyModel.setRowCount(0);
             try (ResultSet rs = db.fetchHistory()) {
@@ -254,25 +256,25 @@ class SimWindow extends JFrame {
                     historyModel.addRow(row);
                 }
             } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, "Error al cargar historial" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error al cargar historial: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
     }
 
     private String timeNow() {
-        return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"));
+        return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 }
 
 class DBManager {
-    //>>> ACTUALIZA ESTOS VALORES CON TU CONEXION ORACLE <<<
-    private static final String DB_URL = "jdbc:oracle:thin:@//localhost:1521/orcl";
+    // >>> ACTUALIZA ESTOS VALORES CON TU CONEXIÓN A ORACLE <<<
+    private static final String DB_URL = "jdbc:oracle:thin:@//localhost:1521/orcl"; // ejemplo
     private static final String DB_USER = "system";
     private static final String DB_PASS = "Tapiero123";
 
-    //consultas
+    // Consultas
     private static final String INSERT_SQL = "INSERT INTO so_actions (action_type, details) VALUES (?, ?)";
-    private static final String FETCH_SQL = "SELECT id, action_ts, action_type, details * FROM so_actions ORDER BY action_ts DESC";
+    private static final String FETCH_SQL = "SELECT id, action_ts, action_type, details FROM so_actions ORDER BY action_ts DESC";
 
     public DBManager() {
         // Probar conexión al iniciar (opcional)
