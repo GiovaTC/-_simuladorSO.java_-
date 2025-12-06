@@ -4,6 +4,8 @@
 
 # 🖥️ SimuladorSO -- Java Swing + Oracle 19c .
 
+<img width="2552" height="1079" alt="image" src="https://github.com/user-attachments/assets/b0676ee1-331c-4f53-b84b-50fe76708364" />    
+
 Aplicación en un solo archivo Java (SimuladorSO.java) para IntelliJ, que
 simula una ventana de "sistema operativo" con varias acciones y registra
 todo en una base de datos Oracle 19c.
